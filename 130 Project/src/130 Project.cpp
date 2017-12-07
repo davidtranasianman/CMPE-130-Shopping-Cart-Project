@@ -1,5 +1,4 @@
 #include <cstdlib>
-#include "dStack.h" //for featured look
 #include <fstream>
 #include <iomanip> //setprecision
 #include <iostream>
@@ -14,11 +13,68 @@ struct product{
 	int stock;
 };
 
+struct node
+{
+	product item;
+	node* left;
+	node* right;
+};
+
+class dStack {
+private:
+	int size;
+	int top;
+	node** list;
+
+public:
+	dStack(int = 100);
+	~dStack();
+	void push(node*);
+	node* pop();
+	bool isEmpty();
+};
+
+dStack::dStack(int a) {
+	list = new node*[a];
+	size = a;
+	top = -1; //-1 indicates empty stack
+}
+
+dStack::~dStack() {
+	delete[] list;
+}
+
+void dStack::push(node* a) {
+	if (top == size) {
+		return;
+	} else {
+			top++;
+			list[top] = a;
+	}
+}
+node* dStack::pop() {
+	if (top == -1) {
+		return 0;
+	} else {
+		node* a = list[top];
+		top--;
+		return a;
+	}
+}
+
+bool dStack::isEmpty() {
+	if (top == -1)
+		return 1;
+	else
+		return 0;
+}
+
+
 void loadStock(product* a, int &b, string c); //opens a product list and fills array with content
 void outputStock(product* list, int& listSize);
 product* addArray(product* list1, int& listSize1, product* list2, int& listSize2, int& listSize3); //adds list 2 onto list 1
-void sortPrice(product* list, int& listSize);
-void sortName(product* list, int& listSize);
+void sortPrice(product* list, int start, int end);
+void sortName(product* list, int start, int end);
 void specificSearch(product* list1, int& listSize1, product* list2, int& listSize2, product* list3, int& listSize3, product* cart, int& cartSize);
 void featuredSearch(product* list, int& listSize, product* cart, int& cartSize);
 void checkout(product* list, int& listSize);
@@ -76,23 +132,22 @@ int main() {
 			specificSearch(officeChairs, chairSize, officeTable, tableSize, officeShelves, shelfSize, cart, cartSize);
 			break;
 		case 6:
-			//TODO featured product search
 			largeList = addArray(officeChairs, chairSize, officeTable, tableSize, largeListSize);
 			largeList = addArray(largeList, largeListSize, officeTable, tableSize, largeListSize);
-			//insert quick sort
+			sortPrice(largeList, 0, largeListSize-1);
 			featuredSearch(largeList, largeListSize, cart, cartSize);
 			delete [] largeList; //empty the memory
 			largeListSize = 0;
 			break;
-
 		case 7:
 			checkout(cart, cartSize);
+			cartSize = 0;
 			break;
-		case 8:
 		default: continue;
 		}
 	}
 	cout << "Have a Nice Day";
+	cin.ignore();
 	return 0;
 }
 
@@ -134,6 +189,16 @@ void outputStock(product* list, int& listSize){
 	cout << "____________________________________________________________\n";
 }
 
+void outputCart(product* list, int& listSize){
+	for(int i = 0; i < listSize; i++){
+		cout << "\n____________________________________________________________\n";
+		cout << "Product " << i + 1;
+		cout << "\nName: " << list[i].name;
+		cout << "\nPrice: " << fixed << setprecision(2) << list[i].price;
+	}
+	cout << "\n____________________________________________________________\n";
+}
+
 product* addArray(product* list1, int& listSize1, product* list2, int& listSize2, int& listSize3){
 	product* temp = new product[listSize1 + listSize2];
 	for(int i = 0; i < listSize1; i++){//add list 1
@@ -148,9 +213,72 @@ product* addArray(product* list1, int& listSize1, product* list2, int& listSize2
 	return temp;
 }
 
-void sortPrice(product* list, int& listSize){}
+void swapName (product &first, product &second) //helper function to swap values in array
+{                                   //can change int to class Item or whatever type is needed
+	product start = first;
+    first = second;
+    second = start;
+}
 
-void sortName(product* list, int& listSize){}
+int partitionName (product * arr, int low, int high) //arr[] is sorted array, low is start index, and high is end index
+{
+    product pivot = arr[high];  //set pivot as high element
+    int index = (low - 1);          //set index to start at lower element
+
+    for (int i = low; i <= high - 1; i++)
+    {
+        if (arr[i].name <= pivot.name)            //if element is smaller than pivot
+        {
+            index++;                    //increment index
+            swapName(arr[index], arr[i]);
+        }
+    }
+    swapName(arr[index + 1], arr[high]);
+    return (index + 1);
+}
+
+void sortName(product* list, int start, int end){
+	if (start < end)                     //if unsorted array
+    {
+        int partitionIndex = partitionName(list, start, end);
+
+        sortName(list, start, end - 1);
+        sortName(list, partitionIndex + 1, end);
+    }
+}
+
+void swapPrice (product* list, int first, int second) //helper function to swap values in array
+{                                   //can change int to class Item or whatever type is needed
+	product start = list[first];
+    list[first] = list[second];
+    list[second] = start;
+}
+
+int partitionPrice (product* arr, int low, int high) //arr[] is sorted array, low is start index, and high is end index
+{
+	product pivot = arr[high];  //set pivot as high element
+    int index = (low - 1);          //set index to start at lower element
+
+    for (int i = low; i <= high - 1; i++)
+    {
+        if (arr[i].price <= pivot.price)            //if element is smaller than pivot
+        {
+            index++;                    //increment index
+            swapPrice(arr, index, i);
+        }
+    }
+    swapPrice(arr, index+1, high);
+    return (index + 1);
+}
+
+void sortPrice(product* list, int start, int end){
+	if (start < end)                     //if unsorted array
+    {
+        int partitionIndex = partitionPrice(list, start, end);
+        sortPrice(list, start, end - 1);
+        sortPrice(list, partitionIndex + 1, end);
+    }
+}
 
 void specificSearch(product* list1, int& listSize1, product* list2, int& listSize2, product* list3, int& listSize3, product* cart, int& cartSize)
 {
@@ -163,7 +291,7 @@ void specificSearch(product* list1, int& listSize1, product* list2, int& listSiz
 		if(l2) printf(" Office Tables");
 		if(l3) printf( " Office Shelves");
 		if(l1 == 0 && l2 == 0 && l3 == 0) printf(" none");
-		cout << "\nWhat Product are you interested in\n1. Office Chairs\n2. Office Tables\n3. Office Shelves\n4. Exit selection\nSelect the Chosen selection to deselect";
+		cout << "\nWhat Product are you interested in\n1. Office Chairs\n2. Office Tables\n3. Office Shelves\n4. Exit selection\nSelect the Chosen selection to deselect\n";
 		cin >> choice;
 		cin.ignore(1000,10);
 		if(choice == 1) l1 = l1 ^ 1;
@@ -202,46 +330,92 @@ void specificSearch(product* list1, int& listSize1, product* list2, int& listSiz
 	delete [] largeList;
 }
 
+node* insert(product a)//creates instance of a node
+{
+	node* prdt = new node;
+	prdt->item = a;
+	prdt->left = NULL;
+	prdt->right = NULL;
+
+	return prdt;
+}
+
+node* arrToBST(product* list, int begin, int end)//creates BST similar to a binary search (O)n since it must make a tree with all new nodes
+{
+	if(begin > end) return NULL;
+	int mid = (begin + end)/2;
+	node* root = insert(list[mid]);
+	root->left = arrToBST(list, begin, mid-1);
+	root->right = arrToBST(list, mid+1, end);
+	return root;
+}
+
+void removeStock(node* index, product* list, int begin, int end)//implements binary search
+{
+	while(begin <= end)
+	{
+		int mid = (begin + end) / 2;
+		if(list[mid].price == index->item.price){
+			list[mid].stock--;
+			return;
+		}
+
+		if(list[mid].price < index->item.price){
+			begin = mid + 1;
+		}
+
+		else end = mid - 1;
+	}
+
+	return;
+}
+
 void featuredSearch(product* list, int& listSize, product* cart, int& cartSize){
-		int choice = 0;
-		int index = (listSize - 1) / 2;
-		int begin = 0;
-		int end = listSize - 1;
-		while(choice != 4){
-			system("CLS");
-			cout << "____________________________________________________________\n";
-			cout << "\nName: " << list[index].name;
-			cout << "\nPrice: " << fixed << setprecision(2) << list[index].price;
-			cout << "\nIn Stock: " << list[index].stock << endl;
-			cout << "____________________________________________________________\n";
-			cout << "Are you:\n1. Interested in buying the product, or are you looking for\n2. Budget Friendly\n3. Quality\n4. Exit";
-			cin >> choice;
-			cin.ignore(1000,10);
-			switch(choice){
+	node* head; //create the BST
+	head = arrToBST(list, 0, listSize-1);
+	int choice = 0;
+	node* index = head; //itterator
+	dStack indexStack(100); //indexes paths not chosen
+	while(choice != 4){
+		system("CLS");
+		cout << "____________________________________________________________\n";
+		cout << "\nName: " << index->item.name;
+		cout << "\nPrice: " << fixed << setprecision(2) << index->item.price;
+		cout << "\nIn Stock: " << index->item.stock << endl;
+		cout << "____________________________________________________________\n";
+		cout << "Are you:\n1. Interested in buying the product, or are you looking for\n2. Budget Friendly\n3. Quality\n4. Exit\n";
+		cin >> choice;
+		cin.ignore(1000,10);
+		switch(choice){
 			case 1:
-				if(list[index].stock == 0){
+				if(index->item.stock == 0){
 					cout << "\n\nSorry Out of Stock, press enter to continue";
 					cin.ignore();
 				}
 				else{
-					cart[cartSize] = list[index];
+					cart[cartSize] = index->item;
 					cartSize++;
-					list[index].stock--;
+					index->item.stock--;
+					removeStock(index, list, 0, listSize);
 				}
 				break;
 			case 2:
-				end = index-1;
-				index = (end + begin) / 2;
+				if(index->right != NULL) indexStack.push(index->right); //possibly pushes unchosen path if it exists
+				if(index->left != NULL) index = index->left; //if left child exist thats cheaper, go to it
+				else if(indexStack.isEmpty()) choice = 4; //you traversed the entire tree, exit loop
+				else index = indexStack.pop();
 				break;
 			case 3:
-				begin = index+1;
-				index = (end + begin) / 2;
+				if(index->left != NULL) indexStack.push(index->left); //possibly pushes unchosen path if it exists
+				if(index->right != NULL) index = index->right; //if left child exist thats cheaper, go to it
+				else if(indexStack.isEmpty()) choice = 4; //you traversed the entire tree, exit loop
+				else index = indexStack.pop();
 				break;
 			case 4:
 				return;
 			default: continue;
 			}
-		}
+	}
 }
 
 void checkout(product* list, int& listSize)
@@ -252,8 +426,10 @@ void checkout(product* list, int& listSize)
 	}
 	system("CLS");
 	cout << "Products in cart:\n\n";
-	outputStock(list, listSize);
+	outputCart(list, listSize);
 	cout << "\n\n The total is " << cost << endl << endl;
+	cout << "Press enter to continue";
+	cin.ignore();
 
 }
 
@@ -264,20 +440,20 @@ void shopping(product* list, int& listSize, product* cart, int& cartSize){
 
 	while(choice < 1 || choice > 3){
 		system("CLS");
-		cout << "Sort by: 1. Price\n2. Name\n3. Exit Section\n";
+		cout << "Sort by: \n1. Price\n2. Name\n3. Exit Section\n";
 		cin >> choice;
 		cin.ignore(1000,10);
 	}
 
 	//sort list here
-	if(choice == 1) sortPrice(list, listSize);// sort by Price
-	else if(choice == 2) sortName(list, listSize); // sort by Name
+	if(choice == 1) sortPrice(list, 0, listSize-1);// sort by Price
+	else if(choice == 2) sortName(list, 0, listSize-1); // sort by Name
 
 	if(choice != 3){
 		while(purchase != 0){
 			system("CLS");
 			outputStock(list, listSize);
-			cout << "What would you like to buy? (enter 0 to exit to store front)";
+			cout << "What would you like to buy? (enter 0 to exit to store front)\n";
 			cin >> purchase;
 			cin.ignore(1000,10);
 			if(purchase == 0) break;
